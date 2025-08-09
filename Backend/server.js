@@ -5,10 +5,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
-
+import { deployContract } from './Services/deployContract.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+
 
 const app = express();
 
@@ -23,8 +25,8 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Generate QR code from JSON payload
-app.post('/generate-qr', async (req, res) => {
+// Issues a certificate and generates a QR code
+app.post('/issue', async (req, res) => {
   try {
     console.log('QR generation request:', req.body);
     const payload = req.body;
@@ -34,6 +36,10 @@ app.post('/generate-qr', async (req, res) => {
     console.error('QR generation error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+app.get('/test', async (req, res) => {
+  return res.json({ message: 'Test endpoint hit successfully' });
 });
 
 app.post('/verify',async (req, res) => {
@@ -47,8 +53,7 @@ app.post('/verify',async (req, res) => {
         // Decode the QR data
         const decodedData = JSON.parse(Buffer.from(qrData, 'base64').toString('utf-8'));
         
-        // Here you would typically verify the decoded data against your database or logic
-        // For now, we just return the decoded data
+        
         res.json({ verified: true, data: decodedData });
     } catch (err) {
         console.error('Verification error:', err);
@@ -57,6 +62,14 @@ app.post('/verify',async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
-});
+deployContract()
+  .then(() => {
+    console.log('Contract deployed successfully');
+    app.listen(PORT, () => {
+      console.log(`Backend running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Error deploying contract:', error);
+    process.exit(1);
+  });
