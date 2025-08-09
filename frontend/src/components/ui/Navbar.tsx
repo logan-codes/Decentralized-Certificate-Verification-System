@@ -3,19 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sun, Moon, Menu, X } from 'lucide-react';
+import { href, useNavigate } from 'react-router-dom';
 
 interface NavbarProps {
   className?: string;
 }
 
+
 const navItems = [
-  { name: 'Home', href: '#home' },
+  { name: 'Home', href: '/' },
+  { name: 'Issue Certificate', href: '/issue' },
+  { name: 'Verify Certificate', href: '/verify' },
   
 ];
 
 export const Navbar = ({ className = '' }: NavbarProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const isDark = localStorage.getItem('darkMode') === 'true';
@@ -44,14 +49,14 @@ export const Navbar = ({ className = '' }: NavbarProps) => {
       <div className="mx-auto">
         <div className="relative mx-4 mt-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
           <nav className="flex items-center justify-between px-6 py-4">
-            {/* Developer Name - Desktop Left */}
+            
             <motion.div
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.6 }}
               className="hidden md:block"
             >
-              <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              <h1 className="text-base font-semibold text-accent dark:text-slate-100">
                 Verichain
               </h1>
             </motion.div>
@@ -66,7 +71,9 @@ export const Navbar = ({ className = '' }: NavbarProps) => {
               {navItems.map((item, index) => (
                 <motion.a
                   key={item.name}
-                  href={item.href}
+                  onClick={() => {
+                    navigate(item.href);
+                  }}
                   initial={{ y: -20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 + index * 0.1, duration: 0.6 }}
@@ -88,7 +95,7 @@ export const Navbar = ({ className = '' }: NavbarProps) => {
             <div className="md:hidden flex-1 flex justify-center">
               <motion.h1
                 layout
-                className="text-base font-semibold text-slate-800 dark:text-slate-100"
+                className="text-base font-semibold text-accent dark:text-slate-100"
               >
                 Verichain
               </motion.h1>
@@ -189,8 +196,11 @@ export const Navbar = ({ className = '' }: NavbarProps) => {
                   {navItems.map((item, index) => (
                     <motion.a
                       key={`mobile-${item.name}`}
-                      href={item.href}
-                      onClick={closeMenu}
+                      onClick={() => {
+                        navigate(item.href);  
+                        closeMenu();
+                        }
+                      }
                       initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ delay: 0.1 + index * 0.1 }}
