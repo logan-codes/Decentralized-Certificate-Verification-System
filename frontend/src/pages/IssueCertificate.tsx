@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Form, FormControl, FormDescription, FormField } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
 const formSchema = z.object({
   recipient: z.string().min(2).max(50),
@@ -58,50 +59,81 @@ const IssueCertificate = () => {
     }
   }
 
+  const handleDownload = () => {
+    if (!qrCode) return
+    const link = document.createElement('a')
+    link.href = qrCode
+    link.download = 'certificate-qr.png'
+    link.click()
+  }
+
+  const handleCopy = async () => {
+    if (!qrCode) return
+    try {
+      await navigator.clipboard.writeText(qrCode)
+      alert('QR data copied to clipboard!')
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+
   return (
     <>
       <Navbar/>
-      <div className='mt-25 mx-5'>
-        <p>Issue Certificate Page</p>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-            <FormDescription className='mb-4'>
-              Fill in the details to issue a new certificate.
-            </FormDescription>
-            <FormField
-              control={form.control}
-              name='recipient'
-              render={({ field }) => (
-                <FormControl>
-                  <Input placeholder='Recipient' {...field} />
-                </FormControl>
-            )}/>
-            <FormField
-              control={form.control}
-              name='issuer'
-              render={({ field }) => (
-                <FormControl>
-                  <Input placeholder='Issuer' {...field} />
-                </FormControl>
-            )}/>
-            <FormField
-              control={form.control}
-              name='file'
-              render={({ field }) => (
-                <FormControl>
-                  <Input type='file'  onChange={e => field.onChange(e.target.files?.[0])}/>
-                </FormControl>
-            )}/>
-            <Button className='mt-4' type='submit'>Issue Certificate</Button>
-          </form>
-        </Form>
-        {qrCode && (
-        <div>
-          <h3>Generated QR Code:</h3>
-          <img src={qrCode} alt="QR Code" style={{ width: 200, height: 200 }} />
-        </div>
-      )}
-      </div>
+      {!qrCode ? (
+
+        <div className='flex flex-col items-center justify-center mt-25 mx-5'>
+          <h1>Issue Certificate Page</h1>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+              <FormDescription className='mb-4'>
+                Fill in the details to issue a new certificate.
+              </FormDescription>
+              <FormField
+                control={form.control}
+                name='recipient'
+                render={({ field }) => (
+                  <FormControl>
+                    <Input placeholder='Recipient' {...field} />
+                  </FormControl>
+              )}/>
+              <FormField
+                control={form.control}
+                name='issuer'
+                render={({ field }) => (
+                  <FormControl>
+                    <Input placeholder='Issuer' {...field} />
+                  </FormControl>
+              )}/>
+              <FormField
+                control={form.control}
+                name='file'
+                render={({ field }) => (
+                  <FormControl>
+                    <Input type='file'  onChange={e => field.onChange(e.target.files?.[0])}/>
+                  </FormControl>
+              )}/>
+              <Button className='mt-4 flex justify-center w-full ' type='submit'>Issue Certificate</Button>
+            </form>
+          </Form> 
+        </div>):
+        (<div className='mt-25 mx-5 flex flex-col items-center justify-center'>
+          <Card >
+            <CardHeader>
+              <CardTitle className='text-xl font-bold text-center'>Certificate QR Code</CardTitle>
+            </CardHeader>
+            <CardContent className='flex flex-col items-center'>
+              <img  src={qrCode} alt="QR Code" className='w-200-px h-200-px' />
+              <div>
+                <Button className='mt-4 mx-3' onClick={()=>{setQrCode(null)}}>Back</Button>
+                <Button className='mt-4 mx-3' onClick={handleDownload}>Download QR Code</Button>
+                <Button className='mt-4 mx-3' onClick={handleCopy}>Copy QR Code</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>)
+      }
     </>
   )
 }

@@ -12,3 +12,17 @@ How to contribute:
 4. Push your changes to your forked repository.
 ```git push origin my-feature```
 5. Create a pull request to merge your changes into the main repository.
+
+
+How to run the system:
+1. Frontend 
+cd frontend
+npm install
+npm run dev
+2. Backend
+cd backend
+npm install
+npx hardhat run --network localhost
+new terminal
+cd backend
+node ./server.js
