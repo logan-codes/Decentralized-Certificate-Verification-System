@@ -25,10 +25,3 @@ async function deployContract() {
 module.exports = {
   deployContract
 };
-
-// deployContract()
-//   .then(() => process.exit(0))
-//   .catch((error) => {
-//     console.error(error);
-//     process.exit(1);
-//   }); 

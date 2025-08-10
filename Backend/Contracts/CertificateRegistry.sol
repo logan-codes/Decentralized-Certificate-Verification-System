@@ -3,17 +3,16 @@ pragma solidity ^0.8.0;
 
 contract CertificateRegistry {
     struct Certificate {
-        string ipfsHash;
         string recipient;
-        string metadata;
         string issuer;
+        string file;
         bool valid;
     }
 
     mapping(string => Certificate) public certificates; 
     address public owner;
 
-    event CertificateIssued(string certificateId, string ipfsHash, string recipient, string metadata, string issuer);
+    event CertificateIssued(string certificateId, string recipient, string issuer, string file);
     event CertificateRevoked(string certificateId);
 
     modifier onlyOwner() {
@@ -27,14 +26,13 @@ contract CertificateRegistry {
 
     function issueCertificate(
         string memory certificateId,
-        string memory ipfsHash,
         string memory recipient,
-        string memory metadata,
-        string memory issuer
+        string memory issuer,
+        string memory file
     ) public onlyOwner {
         require(!certificates[certificateId].valid, "Certificate already exists");
-        certificates[certificateId] = Certificate(ipfsHash, recipient, metadata, issuer, true);
-        emit CertificateIssued(certificateId, ipfsHash, recipient, metadata, issuer);
+        certificates[certificateId] = Certificate(recipient, issuer, file, true);
+        emit CertificateIssued(certificateId, recipient, issuer, file);
     }
 
     function revokeCertificate(string memory certificateId) public onlyOwner {
@@ -43,8 +41,8 @@ contract CertificateRegistry {
         emit CertificateRevoked(certificateId);
     }
 
-    function verifyCertificate(string memory certificateId) public view returns (string memory ipfsHash, string memory recipient, string memory metadata, string memory issuer, bool valid) {
+    function verifyCertificate(string memory certificateId) public view returns (string memory recipient, string memory issuer, string memory file, bool valid) {
         Certificate memory cert = certificates[certificateId];
-        return (cert.ipfsHash, cert.recipient, cert.metadata, cert.issuer, cert.valid);
+        return (cert.recipient, cert.issuer, cert.file, cert.valid);
     }
 } 
