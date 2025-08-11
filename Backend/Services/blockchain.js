@@ -59,10 +59,12 @@ class BlockchainService {
 
     try {
       const result = await this.contract.verifyCertificate(certificateId);
+      await result.wait();
+      console.log("Certificate verified:", certificateId);
       return {
-        ipfsHash: result[0],
-        recipient: result[1],
-        metadata: result[2],
+        recipient: result[0],
+        issuer: result[1],
+        file: result[2],
         valid: result[3]
       };
     } catch (error) {

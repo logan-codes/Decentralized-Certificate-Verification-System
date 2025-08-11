@@ -34,7 +34,7 @@ const IssueCertificate = () => {
     formData.append('file', values.file);
 
     try {
-      const uploadRes = await fetch('http://localhost:3001/upload', {
+      const uploadRes = await fetch('http://localhost:3001/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -42,7 +42,7 @@ const IssueCertificate = () => {
       const uploadResult = await uploadRes.json();
       if (!uploadResult.filename) throw new Error('Upload failed');
 
-      const qrRes = await fetch('http://localhost:3001/issue', {
+      const qrRes = await fetch('http://localhost:3001/api/issue', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -82,7 +82,6 @@ const IssueCertificate = () => {
     <>
       <Navbar/>
       {!qrCode ? (
-
         <div className='flex flex-col items-center justify-center mt-25 mx-5'>
           <h1>Issue Certificate Page</h1>
           <Form {...form}>
@@ -119,12 +118,12 @@ const IssueCertificate = () => {
           </Form> 
         </div>):
         (<div className='mt-25 mx-5 flex flex-col items-center justify-center'>
-          <Card >
+          <Card className="--color-background">
             <CardHeader>
               <CardTitle className='text-xl font-bold text-center'>Certificate QR Code</CardTitle>
             </CardHeader>
             <CardContent className='flex flex-col items-center'>
-              <img  src={qrCode} alt="QR Code" className='w-200-px h-200-px' />
+              <img  src={qrCode} alt="QR Code" className='w-200-px h-200-px border-4 rounded-2xl' />
               <div>
                 <Button className='mt-4 mx-3' onClick={()=>{setQrCode(null)}}>Back</Button>
                 <Button className='mt-4 mx-3' onClick={handleDownload}>Download QR Code</Button>

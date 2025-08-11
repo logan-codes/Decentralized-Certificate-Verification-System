@@ -1,5 +1,6 @@
 import Navbar from '@/components/ui/Navbar'
-import { useState } from 'react'
+import { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -8,53 +9,52 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 const formSchema = z.object({
-  qr_url: z.string().min(1, { message: 'This field is required' }),
+  certID: z.string().min(1, { message: 'This field is required' }),
 })
 
 
 const VerifyCertificate = () => {
-  const [verify, setVerify] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const queryParams = new URLSearchParams(location.search);
+  const id = queryParams.get('certID');
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      qr_url: '',
+      certID: '',
     },
   })
 
-  const onSubmit = async(values: z.infer<typeof formSchema>) => {
-    try {
-      const res = await fetch('http://localhost:3001/verify', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ qr_url: values.qr_url }),
-      });
-
-      if (!res.ok) throw new Error('Verification failed');
-
-      setVerify(true);
-    } catch (err) {
-      console.error('Error:', err);
+  useEffect(() => {
+    if (id) {
+      const res = fetch(`http://localhost:3001/api/verify?certID=${id}`);
     }
+  }, [id]);
+
+
+  const onSubmit = async(values: z.infer<typeof formSchema>) => {
+    navigate('/verify?certID=' + encodeURIComponent(values.certID));
   }
 
   return (
     <>
       <Navbar />
-      {!verify ? (
+      {!id ? (
         <div className='flex flex-col items-center justify-center mt-25 mx-5'>
           <h1 className='text-2xl font-bold'>Verify Certificate</h1>
           <Form {...form}>
             <form className='w-1/2' onSubmit={form.handleSubmit(onSubmit)}>
               <FormDescription className='mb-4'>
-                Enter the QR Code URL to verify the certificate.
+                Enter the Certificate ID to verify the certificate.
               </FormDescription>
               <FormField
                 control={form.control}
-                name="qr_url"
+                name="certID"
                 render={({ field }) => (
                   <FormControl>
-                    <Input placeholder="Enter QR Code URL" {...field} />
+                    <Input placeholder="Enter Certificate ID" {...field} />
                   </FormControl>
                 )}
               />
@@ -63,10 +63,10 @@ const VerifyCertificate = () => {
           </Form>
         </div>
         ):(
-          <div className='flex flex-col items-center justify-center mt-10'>
+          <div className='flex flex-col items-center justify-center mt-25 mx-5'>
             <h1 className='text-2xl font-bold'>Certificate Verified</h1>
             <p className='text-xl'>Your certificate has been verified successfully.</p>
-            <Button onClick={() => setVerify(false)} className='mt-4'>Verify Another Certificate</Button>
+            <Button onClick={() => {navigate('/verify');}} className='mt-4'>Verify Another Certificate</Button>
           </div>
         )
       }

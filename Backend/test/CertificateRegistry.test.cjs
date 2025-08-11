@@ -5,7 +5,6 @@ describe("CertificateRegistry", function () {
   let CertificateRegistry;
   let owner;
   let addr1;
-  let addr2;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
@@ -22,58 +21,54 @@ describe("CertificateRegistry", function () {
   describe("Certificate Operations", function () {
     it("Should issue a certificate", async function () {
       const certificateId = "CERT001";
-      const ipfsHash = "QmTestHash123";
       const recipient = "John Doe";
-      const metadata = '{"course": "Blockchain Development", "grade": "A"}';
       const issuer = owner.address;
+      const file = "QmTestHash123";
+      
 
-      await certificateRegistry.issueCertificate(certificateId, ipfsHash, recipient, metadata, issuer);
+      await certificateRegistry.issueCertificate(certificateId, recipient, issuer, file);
 
-      const cert = await certificateRegistry.verifyCertificate(certificateId);
-      expect(cert.ipfsHash).to.equal(ipfsHash);
+      const cert = await certificateRegistry.certificates(certificateId);
       expect(cert.recipient).to.equal(recipient);
-      expect(cert.metadata).to.equal(metadata);
       expect(cert.issuer).to.equal(issuer);
+      expect(cert.file).to.equal(file);
       expect(cert.valid).to.be.true;
     });
 
     it("Should not allow non-owner to issue certificate", async function () {
       const certificateId = "CERT002";
-      const ipfsHash = "QmTestHash456";
       const recipient = "Jane Doe";
-      const metadata = '{"course": "Web Development"}';
       const issuer = owner.address;
+      const file = "QmTestHash456";
 
       await expect(
-        certificateRegistry.connect(addr1).issueCertificate(certificateId, ipfsHash, recipient, metadata, issuer)
+        certificateRegistry.connect(addr1).issueCertificate(certificateId, recipient, issuer, file)
       ).to.be.revertedWith("Not contract owner");
     });
 
     it("Should revoke a certificate", async function () {
       const certificateId = "CERT003";
-      const ipfsHash = "QmTestHash789";
       const recipient = "Bob Smith";
-      const metadata = '{"course": "Data Science"}';
       const issuer = owner.address;
+      const file = "QmTestHash789";
 
-      await certificateRegistry.issueCertificate(certificateId, ipfsHash, recipient, metadata, issuer);
+      await certificateRegistry.issueCertificate(certificateId, recipient, issuer, file);
       await certificateRegistry.revokeCertificate(certificateId);
 
-      const cert = await certificateRegistry.verifyCertificate(certificateId);
+      const cert = await certificateRegistry.certificates(certificateId);
       expect(cert.valid).to.be.false;
     });
 
     it("Should not allow duplicate certificate IDs", async function () {
       const certificateId = "CERT004";
-      const ipfsHash = "QmTestHash101";
       const recipient = "Alice Johnson";
-      const metadata = '{"course": "AI"}';
       const issuer = owner.address;
+      const file = "QmTestHash101";
 
-      await certificateRegistry.issueCertificate(certificateId, ipfsHash, recipient, metadata, issuer);
+      await certificateRegistry.issueCertificate(certificateId, recipient, issuer, file);
       
       await expect(
-        certificateRegistry.issueCertificate(certificateId, "QmDifferentHash", "Different Person", '{"course": "ML"}', issuer)
+        certificateRegistry.issueCertificate(certificateId, "Different Person",  issuer, "QmDifferentHash")
       ).to.be.revertedWith("Certificate already exists");
     });
   });

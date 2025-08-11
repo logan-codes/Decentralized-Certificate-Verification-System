@@ -32,7 +32,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-app.post('/upload', upload.single('file'), async (req, res) => {
+app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     const file = req.file;
     if (!file) {
@@ -52,7 +52,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // issues a certificat  and generates a QR code
-app.post('/issue', async (req, res) => {
+app.post('/api/issue', async (req, res) => {
   const certificateId = `CERT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   try {
     console.log('Issue request:', req.body);
@@ -63,11 +63,7 @@ app.post('/issue', async (req, res) => {
           issuer,
           file,
         );
-    const payload = {
-      certificateId,
-      txHash,
-      timestamp: new Date().toISOString(),
-    };
+    const payload = "http://localhost:5173/verify?certID="+ certificateId;
     const qr = await QRCode.toDataURL(JSON.stringify(payload));
     res.json({ qr });
     console.log('QR code generated:', payload);
@@ -77,27 +73,26 @@ app.post('/issue', async (req, res) => {
   }
 });
 
-app.get('/test', async (req, res) => {
+app.get('/api/test', async (req, res) => {
   return res.json({ message: 'Test endpoint hit successfully' });
 });
 
-app.post('/verify',async (req, res) => {
-    try {
-        console.log('Verification request:', req.body);
-        const { qrData } = req.body;
-        if (!qrData) {
-        return res.status(400).json({ error: 'No QR data provided' });
-        }
-        
-        // Decode the QR data
-        const decodedData = JSON.parse(Buffer.from(qrData, 'base64').toString('utf-8'));
-        
-        
-        res.json({ verified: true, data: decodedData });
-    } catch (err) {
-        console.error('Verification error:', err);
-        res.status(500).json({ error: err.message });
-    }
+app.get('/api/verify',async (req, res) => {
+  const { certID } = req.query;
+  if (!certID) return res.status(400).json({ error: 'Missing certID' });
+  console.log('Verification request:', req.query);
+
+  
+  try {
+    // Lookup blockchain record or DB
+    const record = await blockchainService.verifyCertificate(certID);
+    if (!record) return res.status(404).json({ error: 'Certificate not found' });
+
+    res.json({ verified: true, data: record });
+  } catch (err) {
+    console.error('Verification error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 const PORT = process.env.PORT || 3001;
