@@ -1,5 +1,5 @@
 import Navbar from '@/components/ui/Navbar'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -16,6 +16,7 @@ const formSchema = z.object({
 const VerifyCertificate = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [certificateData, setCertificateData] = useState(null);
 
   const queryParams = new URLSearchParams(location.search);
   const id = queryParams.get('certID');
@@ -29,19 +30,22 @@ const VerifyCertificate = () => {
 
   useEffect(() => {
     if (id) {
-      const res = fetch(`http://localhost:3001/api/verify?certID=${id}`);
+      fetch(`http://localhost:3001/api/verify?certID=${id}`);
+
     }
   }, [id]);
 
 
   const onSubmit = async(values: z.infer<typeof formSchema>) => {
     navigate('/verify?certID=' + encodeURIComponent(values.certID));
+    values.certID = "";
+    
   }
 
   return (
     <>
       <Navbar />
-      {!id ? (
+      {!certificateData ? (
         <div className='flex flex-col items-center justify-center mt-25 mx-5'>
           <h1 className='text-2xl font-bold'>Verify Certificate</h1>
           <Form {...form}>
