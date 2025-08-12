@@ -14,8 +14,7 @@ contract CertificateRegistry {
 
     event CertificateIssued(string certificateId, string recipient, string issuer, string file);
     event CertificateRevoked(string certificateId);
-    event CertificateVerified(string recipient, string issuer, string file, bool valid);
-
+    
     modifier onlyOwner() {
         require(msg.sender == owner, "Not contract owner");
         _;
@@ -42,8 +41,9 @@ contract CertificateRegistry {
         emit CertificateRevoked(certificateId);
     }
 
-    function verifyCertificate(string memory certificateId) public onlyOwner {
+    function verifyCertificate(string memory certificateId) public view returns (string memory recipient, string memory issuer, string memory file, bool valid) {
         Certificate memory cert = certificates[certificateId];
-        emit CertificateVerified(cert.recipient, cert.issuer, cert.file, cert.valid);
+        require(bytes(cert.recipient).length > 0, "Certificate not found");
+        return (cert.recipient, cert.issuer, cert.file, cert.valid);
     }
-} 
+}   

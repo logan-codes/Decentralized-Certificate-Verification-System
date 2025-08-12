@@ -59,13 +59,15 @@ class BlockchainService {
 
     try {
       const result = await this.contract.verifyCertificate(certificateId);
-      await result.wait();
+      console.log("Certificate verification result:", result);
+      const [recipient, issuer, file, valid] = result;
+      if (!result) throw new Error("Certificate not found");
       console.log("Certificate verified:", certificateId);
       return {
-        recipient: result[0],
-        issuer: result[1],
-        file: result[2],
-        valid: result[3]
+        recipient,
+        issuer,
+        file,
+        valid
       };
     } catch (error) {
       console.error("Failed to verify certificate:", error);

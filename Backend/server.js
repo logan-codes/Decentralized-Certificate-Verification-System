@@ -18,11 +18,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-(async () => {
-  await blockchainService.connect();
-  const isOwner = await blockchainService.isOwner();
-  console.log("Is owner:", isOwner);
-})();
+
 
 const upload = multer({ dest: '/filebase' });
 
@@ -78,7 +74,7 @@ app.get('/api/test', async (req, res) => {
 });
 
 app.get('/api/verify',async (req, res) => {
-  const { certID } = req.query;
+  const certID = req.query.certID;
   if (!certID) return res.status(400).json({ error: 'Missing certID' });
   console.log('Verification request:', req.query);
 
@@ -99,6 +95,11 @@ const PORT = process.env.PORT || 3001;
 deployContract()
   .then(() => {
     console.log('Contract deployed successfully');
+    (async () => {
+      await blockchainService.connect();
+      const isOwner = await blockchainService.isOwner();
+      console.log("Is owner:", isOwner);
+    })();
     app.listen(PORT, () => {
       console.log(`Backend running on port ${PORT}`);
     });
