@@ -44,3 +44,6 @@ ignition/deployments/chain-31337
 
 # Deployment files
 contract-address.json
+
+# test files
+/test
