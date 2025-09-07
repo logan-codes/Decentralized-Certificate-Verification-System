@@ -5,7 +5,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
-import { deployContract } from './Services/deployContract.js';
 import crypto from 'crypto';
 import { blockchainService } from './Services/blockchain.js';
 
@@ -17,8 +16,6 @@ const app = express();
 // Enable CORS for all routes
 app.use(cors());
 app.use(express.json());
-
-
 
 const upload = multer({ dest: '/filebase' });
 
@@ -47,8 +44,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// issues a certificat  and generates a QR code
 app.post('/api/issue', async (req, res) => {
+  // Issue the certificate on blockchain
   const certificateId = `CERT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   try {
     console.log('Issue request:', req.body);
@@ -60,7 +57,8 @@ app.post('/api/issue', async (req, res) => {
           file,
         );
     const payload = "http://localhost:5173/verify?certID="+ certificateId;
-    const qr = await QRCode.toDataURL(JSON.stringify(payload));
+    // Generate QR code
+    const qr = await QRCode.toDataURL(payload);
     res.json({ qr });
     console.log('QR code generated:', payload);
   } catch (err) {
@@ -73,38 +71,137 @@ app.get('/api/test', async (req, res) => {
   return res.json({ message: 'Test endpoint hit successfully' });
 });
 
-app.get('/api/verify',async (req, res) => {
+app.get('/api/verify', async (req, res) => {
   const certID = req.query.certID;
-  if (!certID) return res.status(400).json({ error: 'Missing certID' });
-  console.log('Verification request:', req.query);
-
   
-  try {
-    // Lookup blockchain record or DB
-    const record = await blockchainService.verifyCertificate(certID);
-    if (!record) return res.status(404).json({ error: 'Certificate not found' });
+  // Validate input
+  if (!certID) {
+    return res.status(400).json({ 
+      error: 'Missing certID parameter',
+      verified: false 
+    });
+  }
+  
+  if (typeof certID !== 'string' || certID.trim() === '') {
+    return res.status(400).json({ 
+      error: 'Invalid certID format',
+      verified: false 
+    });
+  }
 
-    res.json({ verified: true, data: record });
+  console.log('Verification request for certID:', certID.trim());
+
+  try {
+    // Verify certificate on blockchain
+    const record = await blockchainService.verifyCertificate(certID.trim());
+    
+    if (!record) {
+      return res.status(404).json({ 
+        error: 'Certificate not found or does not exist',
+        verified: false,
+        certID: certID.trim()
+      });
+    }
+
+    // Validate the returned data
+    if (!record.recipient || !record.issuer || !record.file) {
+      return res.status(500).json({ 
+        error: 'Invalid certificate data received from blockchain',
+        verified: false 
+      });
+    }
+
+    console.log('Certificate verified successfully:', record);
+    res.json({ 
+      verified: true, 
+      data: record,
+      certID: certID.trim()
+    });
+    
   } catch (err) {
     console.error('Verification error:', err);
-    res.status(500).json({ error: err.message });
+    
+    // Handle different types of errors
+    if (err.message.includes('Not connected to blockchain')) {
+      return res.status(503).json({ 
+        error: 'Blockchain service unavailable',
+        verified: false 
+      });
+    }
+    
+    if (err.message.includes('Failed to verify certificate')) {
+      return res.status(500).json({ 
+        error: 'Failed to verify certificate on blockchain',
+        verified: false,
+        details: err.message
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Internal server error during verification',
+      verified: false,
+      details: err.message
+    });
   }
 });
 
 const PORT = process.env.PORT || 3001;
-deployContract()
-  .then(() => {
+
+// Deploy contract and start server
+async function startServer() {
+  try {
+    console.log('Starting server with auto-deployment...');
+    
+    // Always deploy a fresh contract to ensure it's properly deployed
+    console.log('Deploying contract...');
+     // Deploy to localhost network to match server connection
+     const { spawn } = await import('child_process');
+    await new Promise((resolve, reject) => {
+      const deployProcess = spawn('npx', ['hardhat', 'run', 'Services/deploy.js', '--network', 'localhost'], {
+        stdio: 'inherit',
+        shell: true
+      });
+      deployProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Deployment failed with code ${code}`));
+        }
+      });
+    });
     console.log('Contract deployed successfully');
-    (async () => {
-      await blockchainService.connect();
-      const isOwner = await blockchainService.isOwner();
-      console.log("Is owner:", isOwner);
-    })();
+    
+    // Read the contract address
+    const contractInfo = JSON.parse(fs.readFileSync('./contract-address.json', 'utf8'));
+    console.log('Contract address:', contractInfo.address);
+    console.log('Contract owner:', contractInfo.owner);
+    
+    // Waiting a moment for the deployment to fully settle
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Connect to blockchain service
+    console.log('Connecting to blockchain service...');
+    const connected = await blockchainService.connect();
+    if (!connected) {
+      throw new Error('Failed to connect to blockchain service');
+    }
+    
+    // Verify ownership
+    const isOwner = await blockchainService.isOwner();
+    console.log("Is owner:", isOwner);
+    
+    if (!isOwner) {
+      console.warn('Warning: Server is not the contract owner. Certificate issuance may fail.');
+    }
+    
     app.listen(PORT, () => {
       console.log(`Backend running on port ${PORT}`);
+      console.log('Ready to issue and verify certificates!');
     });
-  })
-  .catch((error) => {
-    console.error('Error deploying contract:', error);
+  } catch (error) {
+    console.error('Error starting server:', error);
     process.exit(1);
-  });
+  }
+}
+
+startServer();

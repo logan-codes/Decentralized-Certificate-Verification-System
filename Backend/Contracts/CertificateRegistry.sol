@@ -13,7 +13,6 @@ contract CertificateRegistry {
     address public owner;
 
     event CertificateIssued(string certificateId, string recipient, string issuer, string file);
-    event CertificateRevoked(string certificateId);
     
     modifier onlyOwner() {
         require(msg.sender == owner, "Not contract owner");
@@ -35,15 +34,18 @@ contract CertificateRegistry {
         emit CertificateIssued(certificateId, recipient, issuer, file);
     }
 
-    function revokeCertificate(string memory certificateId) public onlyOwner {
-        require(certificates[certificateId].valid, "Certificate does not exist");
-        certificates[certificateId].valid = false;
-        emit CertificateRevoked(certificateId);
+    function certificateExists(string memory certificateId) public view returns (bool) {
+        return bytes(certificates[certificateId].recipient).length > 0;
     }
 
     function verifyCertificate(string memory certificateId) public view returns (string memory recipient, string memory issuer, string memory file, bool valid) {
+        require(certificateExists(certificateId), "Certificate not found");
         Certificate memory cert = certificates[certificateId];
-        require(bytes(cert.recipient).length > 0, "Certificate not found");
         return (cert.recipient, cert.issuer, cert.file, cert.valid);
+    }
+
+    function transferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "New owner cannot be zero address");
+        owner = newOwner;
     }
 }   
