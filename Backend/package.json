@@ -2,9 +2,12 @@
   "type": "module",
   "dependencies": {
     "axios": "^1.4.0",
+    "blockstore-core": "^5.0.4",
+    "cid": "^0.1.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "multer": "^2.0.2",
+    "multihash": "^0.1.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

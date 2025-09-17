@@ -155,8 +155,6 @@ class BlockchainService {
     }
   }
 
-  
-
   async isOwner() {
     if (!this.contract || !this.signer) return false;
 
@@ -175,19 +173,6 @@ class BlockchainService {
     return await this.signer.getAddress();
   }
 
-  async transferOwnership(newOwnerAddress) {
-    if (!this.contract) throw new Error("Not connected to blockchain");
-
-    try {
-      const tx = await this.contract.transferOwnership(newOwnerAddress);
-      await tx.wait();
-      console.log("Ownership transferred to:", newOwnerAddress);
-      return tx.hash;
-    } catch (error) {
-      console.error("Failed to transfer ownership:", error);
-      throw error;
-    }
-  }
 }
 
 export const blockchainService = new BlockchainService();

@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@ipld/car": "^5.4.2",
+    "ipfs-unixfs": "^11.2.5",
+    "ipfs-unixfs-importer": "^15.4.0",
+    "multiformats": "^13.4.1"
+  }
+}

@@ -44,8 +44,4 @@ contract CertificateRegistry {
         return (cert.recipient, cert.issuer, cert.file, cert.valid);
     }
 
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0), "New owner cannot be zero address");
-        owner = newOwner;
-    }
 }   

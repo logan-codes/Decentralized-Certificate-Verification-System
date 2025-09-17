@@ -5,8 +5,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
-import crypto from 'crypto';
 import { blockchainService } from './Services/blockchain.js';
+import { importer } from 'ipfs-unixfs-importer';
+import { sha256 } from 'multiformats/hashes/sha2';
+import { MemoryBlockstore } from 'blockstore-core';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,45 +28,72 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+// Endpoint to issue a certificate
+app.post('/api/issue', upload.single('file'), async (req, res) => {
+  // Generating the certificate ID based on the time of request
+  const certificateId = `CERT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // CID output structure
+  const opts = {
+    cidVersion: 1,
+    rawLeaves: true,
+    hasher: sha256
+  };
   try {
+    console.log('Issue request:', req.body);
+    const { recipient, issuer} = req.body;
     const file = req.file;
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const fileBuffer = fs.readFileSync(file.path);
-    const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-    console.log(`File uploaded: ${file.originalname}, Hash: ${fileHash}`);
-    const filePath = path.join(uploadsDir, fileHash + path.extname(file.originalname));
-    fs.copyFileSync(file.path, filePath);
-    res.json({ filename: path.basename(filePath) });
-    fs.unlinkSync(file.path); // Remove the temporary file
-  } catch (err) {
-    console.error('File upload error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+    // implementing CID hashing algo
+    const content = fs.createReadStream(file.path);
+    const source = [{ path: file.path, content }];
+    const blockstore = new MemoryBlockstore();
+    var fileHash = "";
+    for await (const entry of importer(source, blockstore, opts)) {
+      fileHash = entry.cid.toString();
+    }
 
-app.post('/api/issue', async (req, res) => {
-  // Issue the certificate on blockchain
-  const certificateId = `CERT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  try {
-    console.log('Issue request:', req.body);
-    const { recipient, issuer, file } = req.body;
+    console.log(`File uploaded: ${file.originalname}, Hash: ${fileHash}`);
+    // Move file to permanent location with hash as filename
+    const filePath = path.join(uploadsDir, fileHash + path.extname(file.originalname));
+    fs.copyFileSync(file.path, filePath, fs.constants.COPYFILE_EXCL);
+    fs.unlinkSync(file.path); 
     const txHash = await blockchainService.issueCertificate(
           certificateId,
           recipient,
           issuer,
-          file,
+          fileHash,
         );
     const payload = "http://localhost:5173/verify?certID="+ certificateId;
     // Generate QR code
     const qr = await QRCode.toDataURL(payload);
-    res.json({ qr });
+    res.json({ certID:certificateId, qr:qr, link:payload });
     console.log('QR code generated:', payload);
   } catch (err) {
-    console.error('QR generation error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Issuing error:', err);
+    
+    // Handle different types of errors
+    if (err.message.includes('Not connected to blockchain')) {
+      return res.status(503).json({ 
+        error: 'Blockchain service unavailable',
+        verified: false 
+      });
+    }
+    
+    if (err.message.includes('Failed to issue certificate')) {
+      return res.status(500).json({ 
+        error: 'Failed to issue certificate on blockchain',
+        verified: false,
+        details: err.message
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Internal server error during verification',
+      verified: false,
+      details: err.message
+    });
   }
 });
 
@@ -110,12 +140,15 @@ app.get('/api/verify', async (req, res) => {
         verified: false 
       });
     }
+    const filename = record.file;
+    const filePath = path.join("filebase", filename);
 
     console.log('Certificate verified successfully:', record);
     res.json({ 
       verified: true, 
       data: record,
-      certID: certID.trim()
+      certID: certID.trim(),
+      file: record.file,
     });
     
   } catch (err) {
@@ -147,12 +180,10 @@ app.get('/api/verify', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-// Deploy contract and start server
+// Start the server and deploy contract
 async function startServer() {
   try {
-    console.log('Starting server with auto-deployment...');
-    
-    // Always deploy a fresh contract to ensure it's properly deployed
+    console.log('Starting server...');
     console.log('Deploying contract...');
      // Deploy to localhost network to match server connection
      const { spawn } = await import('child_process');
