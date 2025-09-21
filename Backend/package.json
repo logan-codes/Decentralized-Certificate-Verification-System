@@ -5,7 +5,9 @@
     "blockstore-core": "^5.0.4",
     "cid": "^0.1.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "ipfs-unixfs-importer": "^15.4.0",
     "multer": "^2.0.2",
     "multihash": "^0.1.0",
     "qrcode": "^1.5.4"

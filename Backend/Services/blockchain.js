@@ -3,17 +3,14 @@ import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Contract ABI
-const CONTRACT_ABI = [
-  "function issueCertificate(string,string,string,string)",
-  "function verifyCertificate(string) view returns (string,string,string,bool)",
-  "function certificateExists(string) view returns (bool)",
-  "function owner() view returns (address)"
-];
+const CONTRACT_ABI = JSON.parse(fs.readFileSync(path.join(__dirname, '../artifacts/contracts/CertificateRegistry.sol/CertificateRegistry.json'), 'utf8')).abi;
 
 // Get contract address from deployed contract
 function getContractAddress() {
@@ -27,10 +24,10 @@ function getContractAddress() {
 }
 
 // RPC URL (can be replaced with Infura, Alchemy, or local Ganache)
-const RPC_URL = process.env.RPC_URL || "http://127.0.0.1:8545";
+const RPC_URL = process.env.RPC_URL;
 
 // Private key of the signer (for issuing/revoking certificates)
-const PRIVATE_KEY = '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e';
+const PRIVATE_KEY = process.env.SERVER_PRIVATE_KEY;
 
 class BlockchainService {
   provider = null;
@@ -85,13 +82,19 @@ class BlockchainService {
     }
   }
 
-  async issueCertificate(certificateId, ipfsHash, recipient, metadata) {
+  async issueCertificate(fileHash, recipient, issued_by, issued_on) {
     if (!this.contract) throw new Error("Not connected to blockchain");
 
     try {
-      const tx = await this.contract.issueCertificate(certificateId, ipfsHash, recipient, metadata);
+      // Check if certificate already exists
+      const exists = await this.contract.certificateExists(fileHash);
+      if (exists) {
+        throw new Error("Certificate already exists for this file");
+      }
+
+      const tx = await this.contract.issueCertificate(fileHash, recipient, issued_by, issued_on);
       await tx.wait();
-      console.log("Certificate issued:", certificateId);
+      console.log("Certificate issued for file hash:", fileHash);
       return tx.hash;
     } catch (error) {
       console.error("Failed to issue certificate:", error);
@@ -99,15 +102,15 @@ class BlockchainService {
     }
   }
 
-  async verifyCertificate(certificateId) {
+  async verifyCertificate(fileHash) {
     try {
       if (!this.contract) throw new Error("Not connected to blockchain");
       
       // Try the new method first (with certificateExists)
       try {
-        const exists = await this.contract.certificateExists(certificateId);
+        const exists = await this.contract.certificateExists(fileHash);
         if (!exists) {
-          console.log('Certificate does not exist:', certificateId);
+          console.log('Certificate does not exist:', fileHash);
           return null;
         }
       } catch (existsError) {
@@ -116,24 +119,24 @@ class BlockchainService {
       }
 
       // Get the certificate data
-      const [recipient, issuer, file, valid] = await this.contract.verifyCertificate(certificateId);
+      const [recipient, issued_by, issued_on, valid] = await this.contract.verifyCertificate(fileHash);
 
       // Check if the certificate exists (recipient should not be empty)
       if (!recipient || recipient.trim() === '') {
-        console.log('Certificate does not exist (empty recipient):', certificateId);
+        console.log('Certificate does not exist (empty recipient):', fileHash);
         return null;
       }
 
       console.log('Certificate found:');
       console.log('Recipient:', recipient);
-      console.log('Issuer:', issuer);
-      console.log('File:', file);
+      console.log('Issued_by:', issued_by);
+      console.log('Issued_on:', issued_on);
       console.log('Valid:', valid);
       
       return { 
         recipient: recipient.trim(), 
-        issuer: issuer.trim(), 
-        file: file.trim(), 
+        issued_by: issued_by.trim(), 
+        issued_on: issued_on.trim(), 
         valid: valid 
       };
 

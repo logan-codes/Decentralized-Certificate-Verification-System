@@ -1,12 +1,14 @@
 import hre from "hardhat";
 import fs from "fs";
+import dotenv from 'dotenv';
+dotenv.config();
 
 async function main() {
   console.log("Deploying CertificateRegistry...");
   console.log("Network:", hre.network.name);
 
   // Server's private key and address
-  const SERVER_PRIVATE_KEY = '0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e';
+  const SERVER_PRIVATE_KEY = process.env.SERVER_PRIVATE_KEY;
   const serverWallet = new hre.ethers.Wallet(SERVER_PRIVATE_KEY, hre.ethers.provider);
   const serverAddress = serverWallet.address;
   console.log("Server address:", serverAddress);

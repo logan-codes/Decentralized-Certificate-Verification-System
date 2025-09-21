@@ -1,6 +1,6 @@
 import Navbar from '@/components/Navbar'
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -9,98 +9,123 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 const formSchema = z.object({
-  certID: z.string().min(1, { message: 'This field is required' }),
+  file: z.instanceof(File).refine((file) => file.size > 0, {
+    message: 'File must be selected',
+  }),
 })
 
 interface CertificateData {
-  verified: boolean;
-  data: {
-    recipient: string;
-    issuer: string;
-    file: string;
-    valid: boolean;
-  };
-  certID?: string;
+  isAuthentic: boolean,
+  details: {
+    fileHash: string,
+    recipient: string,
+    issued_by: string,
+    issued_on: string,
+    fileName: string,
+  },
+  checks: {
+    blockchainVerification: boolean,
+  }
 }
 
 interface ErrorResponse {
   error: string;
   verified: boolean;
-  certID?: string;
+  fileHash?: string;
   details?: string;
 }
 
 const VerifyCertificate = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ErrorResponse | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const queryParams = new URLSearchParams(location.search);
-  const id = queryParams.get('certID');
-
+  
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      certID: '',
-    },
   })
 
   useEffect(() => {
-    if (id) {
-      setLoading(true);
-      setError(null);
-      setHasSearched(true);
-      
-      fetch(`http://localhost:3001/api/verify?certID=${encodeURIComponent(id)}`)
-        .then(response => {
-          if (!response.ok) {
-            return response.json().then(errorData => {
-              throw new Error(JSON.stringify(errorData));
-            });
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.verified && data.data) {
-            setCertificateData(data);
-            setError(null);
-          } else {
-            setError({
-              error: data.error || 'Certificate verification failed',
-              verified: false,
-              certID: data.certID,
-              details: data.details
-            });
-            setCertificateData(null);
-          }
-        })
-        .catch(err => {
-          try {
-            const errorData = JSON.parse(err.message);
-            setError(errorData);
-          } catch {
-            setError({
-              error: 'Failed to verify certificate',
-              verified: false,
-              details: err.message
-            });
-          }
-          setCertificateData(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+    const params = new URLSearchParams(location.search);
+    const fileH = params.get('fileH');
+    if (fileH) {
+      // If file hash is present in URL, initiate verification
+      verifyByFileHash(fileH);
     }
-  }, [id]);
+  }, [location.search]);
+
+  const verifyByFileHash = async (fileHash: string) => {
+    setError(null);
+    setCertificateData(null);
+    setHasSearched(false);
+    setLoading(true);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/verify-by-hash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileHash }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(JSON.stringify(errorData));
+      }
+      
+      const data = await response.json();
+      setCertificateData(data);
+      setLoading(false);
+      setHasSearched(true);
+    } catch (error) {
+      try {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const parsedError: ErrorResponse = JSON.parse(errorMessage);
+        setError(parsedError);
+      } catch (parseError) {
+        setError({ error: 'An unexpected error occurred', verified: false });
+      }
+      setLoading(false);
+      setHasSearched(true);
+    }
+  }
 
   const onSubmit = async(values: z.infer<typeof formSchema>) => {
     setError(null);
     setCertificateData(null);
     setHasSearched(false);
-    navigate('/verify?certID=' + encodeURIComponent(values.certID.trim()));
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('file', values.file);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/verify', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(JSON.stringify(errorData));
+      }
+      
+      const data = await response.json();
+      setCertificateData(data);
+      setLoading(false);
+      setHasSearched(true);
+    } catch (error) {
+      try {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const parsedError: ErrorResponse = JSON.parse(errorMessage);
+        setError(parsedError);
+      } catch (parseError) {
+        setError({ error: 'An unexpected error occurred', verified: false });
+      }
+      setLoading(false);
+      setHasSearched(true);
+    }
     form.reset();
   }
 
@@ -125,7 +150,7 @@ const VerifyCertificate = () => {
           </div>
         )}
 
-        {error && hasSearched && (
+        {error && hasSearched && !certificateData?.isAuthentic && (
           <div className='bg-red-50 border border-red-200 rounded-lg p-6 mb-6 max-w-md'>
             <div className='flex items-center mb-2'>
               <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -134,8 +159,8 @@ const VerifyCertificate = () => {
               <h3 className='text-lg font-semibold text-red-800'>Verification Failed</h3>
             </div>
             <p className='text-red-700 mb-2'>{error.error}</p>
-            {error.certID && (
-              <p className='text-sm text-red-600 mb-2'>Certificate ID: {error.certID}</p>
+            {error.fileHash && (
+              <p className='text-sm text-red-600 mb-2'>File Hash: {error.fileHash}</p>
             )}
             {error.details && (
               <p className='text-sm text-red-500'>{error.details}</p>
@@ -143,63 +168,98 @@ const VerifyCertificate = () => {
           </div>
         )}
 
-        {certificateData && (
+        {certificateData &&
+          (certificateData.isAuthentic ? (
           <div className='bg-green-50 border border-green-200 rounded-lg p-6 mb-6 max-w-md'>
             <div className='flex items-center mb-4'>
+            
               <svg className="w-6 h-6 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <h2 className='text-xl font-semibold text-green-800'>Certificate Verified</h2>
+              <h2 className='text-xl font-semibold text-green-800'>{certificateData.isAuthentic ? 'Certificate Verified' : 'Invalid Certificate'}</h2>
             </div>
             <div className='space-y-3'>
               <div>
-                <span className='font-medium text-green-700'>Certificate ID:</span>
-                <p className='text-green-600 break-all'>{certificateData.certID}</p>
+                <span className='font-medium text-green-700'>File Hash:</span>
+                <p className='text-green-600 break-all'>{certificateData.details.fileHash}</p>
               </div>
               <div>
                 <span className='font-medium text-green-700'>Recipient:</span>
-                <p className='text-green-600'>{certificateData.data.recipient}</p>
+                <p className='text-green-600'>{certificateData.details.recipient}</p>
               </div>
               <div>
                 <span className='font-medium text-green-700'>Issuer:</span>
-                <p className='text-green-600'>{certificateData.data.issuer}</p>
+                <p className='text-green-600'>{certificateData.details.issued_by}</p>
               </div>
               <div>
-                <span className='font-medium text-green-700'>File Hash:</span>
-                <p className='text-green-600 break-all text-sm'>{certificateData.data.file}</p>
+                <span className='font-medium text-green-700'>Issued On:</span>
+                <p className='text-green-600 break-all text-sm'>{certificateData.details.issued_on}</p>
               </div>
               <div>
                 <span className='font-medium text-green-700'>Status:</span>
                 <span className={`ml-2 px-2 py-1 rounded text-sm font-medium ${
-                  certificateData.data.valid 
+                  certificateData.isAuthentic 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-red-100 text-red-800'
                 }`}>
-                  {certificateData.data.valid ? 'Valid' : 'Invalid'}
+                  {certificateData.isAuthentic ? 'Valid' : 'Invalid'}
                 </span>
               </div>
             </div>
           </div>
-        )}
+        ) : (
+          <div className='bg-red-50 border border-red-200 rounded-lg p-6 mb-6 max-w-md'>
+            <div className='flex items-center mb-2'>
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <h3 className='text-lg font-semibold text-red-800'>Invalid Certificate</h3>
+            </div>
+            <p className='text-red-700 mb-2'>The certificate could not be verified as authentic.</p>
+            <div className='space-y-3'>
+              <div>
+                <span className='font-medium text-red-700'>File Hash:</span>
+                <p className='text-red-600 break-all'>{certificateData.details.fileHash}</p>
+              </div>
+              <div>
+                <span className='font-medium text-red-700'>Recipient:</span>
+                <p className='text-red-600'>{certificateData.details.recipient}</p>
+              </div>
+              <div>
+                <span className='font-medium text-red-700'>Issuer:</span>
+                <p className='text-red-600'>{certificateData.details.issued_by}</p>
+              </div>
+              <div>
+                <span className='font-medium text-red-700'>Issued On:</span>
+                <p className='text-red-600 break-all text-sm'>{certificateData.details.issued_on}</p>
+              </div>
+              <div>
+                <span className='font-medium text-red-700'>Status:</span>
+                <span className={`ml-2 px-2 py-1 rounded text-sm font-medium ${
+                  certificateData.isAuthentic 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {certificateData.isAuthentic ? 'Valid' : 'Invalid'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
 
         {!certificateData && (
           <div className='w-full max-w-md'>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
                 <FormDescription className='text-center text-gray-600 mb-4'>
-                  Enter the Certificate ID to verify the certificate authenticity on the blockchain.
+                  Upload the file to verify the certificate authenticity on the blockchain.
                 </FormDescription>
                 <FormField
                   control={form.control}
-                  name="certID"
+                  name="file"
                   render={({ field }) => (
                     <FormControl>
-                      <Input 
-                        placeholder="Enter Certificate ID" 
-                        {...field} 
-                        disabled={loading}
-                        className='text-center'
-                      />
+                      <Input type='file'  onChange={e => field.onChange(e.target.files?.[0])}/>
                     </FormControl>
                   )}
                 />

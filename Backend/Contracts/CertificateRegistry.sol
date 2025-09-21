@@ -4,15 +4,15 @@ pragma solidity ^0.8.0;
 contract CertificateRegistry {
     struct Certificate {
         string recipient;
-        string issuer;
-        string file;
+        string issued_by;
+        string issued_on;
         bool valid;
     }
 
     mapping(string => Certificate) public certificates; 
     address public owner;
 
-    event CertificateIssued(string certificateId, string recipient, string issuer, string file);
+    event CertificateIssued(string file, string recipient, string issued_by, string issued_on);
     
     modifier onlyOwner() {
         require(msg.sender == owner, "Not contract owner");
@@ -24,24 +24,24 @@ contract CertificateRegistry {
     }
 
     function issueCertificate(
-        string memory certificateId,
+        string memory file,
         string memory recipient,
-        string memory issuer,
-        string memory file
+        string memory issued_by,
+        string memory issued_on
     ) public onlyOwner {
-        require(!certificates[certificateId].valid, "Certificate already exists");
-        certificates[certificateId] = Certificate(recipient, issuer, file, true);
-        emit CertificateIssued(certificateId, recipient, issuer, file);
+        require(!certificates[file].valid, "Certificate already exists");
+        certificates[file] = Certificate(recipient, issued_by, issued_on, true);
+        emit CertificateIssued(file, recipient, issued_by, issued_on);
     }
 
     function certificateExists(string memory certificateId) public view returns (bool) {
         return bytes(certificates[certificateId].recipient).length > 0;
     }
 
-    function verifyCertificate(string memory certificateId) public view returns (string memory recipient, string memory issuer, string memory file, bool valid) {
-        require(certificateExists(certificateId), "Certificate not found");
-        Certificate memory cert = certificates[certificateId];
-        return (cert.recipient, cert.issuer, cert.file, cert.valid);
+    function verifyCertificate(string memory file) public view returns (string memory recipient, string memory issued_by, string memory issued_on, bool valid) {
+        require(certificateExists(file), "Certificate not found");
+        Certificate memory cert = certificates[file];
+        return (cert.recipient, cert.issued_by, cert.issued_on, cert.valid);
     }
 
 }   
