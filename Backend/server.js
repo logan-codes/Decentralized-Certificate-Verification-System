@@ -240,11 +240,11 @@ app.post('/api/verify', (req, res) => {
   });
 });
 
-app.post('/api/verify-by-hash', async (req, res) => {
+app.get('/api/verify-by-hash/:fileHash', async (req, res) => {
     
     try {
-      console.log('Verification request body:', req.body);
-      const fileHash = req.body.fileHash;
+      const fileHash = req.params.fileHash;
+      console.log('Verification request body:', fileHash);
 
     console.log(`verification request for File Hash: ${fileHash}`);
 

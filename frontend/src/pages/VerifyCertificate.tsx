@@ -64,10 +64,9 @@ const VerifyCertificate = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3001/api/verify-by-hash', {
-        method: 'POST',
+      const response = await fetch(`http://localhost:3001/api/verify-by-hash/${fileHash}`, {
+        method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileHash }),
       });
       
       if (!response.ok) {
