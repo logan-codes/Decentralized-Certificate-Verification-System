@@ -7,7 +7,6 @@ import VerifyCertificate from './pages/VerifyCertificate.tsx'
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <Routes>
-
       <Route path='/issue' element={<IssueCertificate/>} />
       <Route path='/verify' element={<VerifyCertificate/>} />
     </Routes>
