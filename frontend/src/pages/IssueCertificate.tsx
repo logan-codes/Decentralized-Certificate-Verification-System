@@ -25,6 +25,8 @@ interface ErrorResponse {
   details?: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const IssueCertificate = () => {
   const [qrCode, setQrCode] = useState(null);
   const [Link, setLink] = useState(null);
@@ -53,7 +55,7 @@ const IssueCertificate = () => {
     setHasSearched(true);
     
     try {
-      const response = await fetch('http://localhost:3001/api/issue', {
+      const response = await fetch(`${API_URL}/issue`, {
         method: 'POST',
         body: formData,
       });

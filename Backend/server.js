@@ -57,8 +57,8 @@ app.post('/api/issue', issueUpload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     // implementing CID hashing algo
-    const content = fs.createReadStream(file.path);
-    const source = [{ path: file.path, content }];
+    const content = fs.readFileSync(file.path);
+    const source = [{ path: file.originalname, content }];
     const blockstore = new MemoryBlockstore();
     var fileHash = "";
     for await (const entry of importer(source, blockstore, opts)) {
@@ -138,8 +138,6 @@ app.post('/api/verify', (req, res) => {
     try {
       console.log('Verification request body:', req.body);
       console.log('Verification request file:', req.file);
-      console.log('Content-Type:', req.get('Content-Type'));
-      console.log('Request headers:', req.headers);
       
       const file = req.file;
       if (!file) {
@@ -148,8 +146,8 @@ app.post('/api/verify', (req, res) => {
       }
 
     // Generate CID hash for the uploaded file
-    const content = fs.createReadStream(file.path);
-    const source = [{ path: file.path, content }];
+    const content = fs.readFileSync(file.path);
+    const source = [{ path: file.originalname, content }];
     const blockstore = new MemoryBlockstore();
     var fileHash = "";
     for await (const entry of importer(source, blockstore, opts)) {
@@ -244,9 +242,7 @@ app.get('/api/verify-by-hash/:fileHash', async (req, res) => {
     
     try {
       const fileHash = req.params.fileHash;
-      console.log('Verification request body:', fileHash);
-
-    console.log(`verification request for File Hash: ${fileHash}`);
+      console.log('Verification request by hash:', fileHash);
 
     // Step 1: Check blockchain for certificate existence using CID hash
     let blockchainResult = null;

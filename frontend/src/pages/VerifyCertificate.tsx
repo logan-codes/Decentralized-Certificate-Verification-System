@@ -35,6 +35,8 @@ interface ErrorResponse {
   details?: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const VerifyCertificate = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,7 +66,7 @@ const VerifyCertificate = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/verify-by-hash/${fileHash}`, {
+      const response = await fetch(`${API_URL}/verify-by-hash/${fileHash}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -100,7 +102,7 @@ const VerifyCertificate = () => {
     formData.append('file', values.file);
     
     try {
-      const response = await fetch('http://localhost:3001/api/verify', {
+      const response = await fetch(`${API_URL}/verify`, {
         method: 'POST',
         body: formData,
       });

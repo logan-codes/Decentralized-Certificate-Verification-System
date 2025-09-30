@@ -9,7 +9,10 @@ async function main() {
 
   // Server's private key and address
   const SERVER_PRIVATE_KEY = process.env.SERVER_PRIVATE_KEY;
-  const serverWallet = new hre.ethers.Wallet(SERVER_PRIVATE_KEY, hre.ethers.provider);
+  const provider = new hre.ethers.JsonRpcProvider(
+    process.env.HARDHAT_NODE_URL || 'http://hardhat:8545'
+  );
+  const serverWallet = new hre.ethers.Wallet(SERVER_PRIVATE_KEY, provider);
   const serverAddress = serverWallet.address;
   console.log("Server address:", serverAddress);
   

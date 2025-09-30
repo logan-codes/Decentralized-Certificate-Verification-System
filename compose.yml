@@ -1,0 +1,44 @@
+version: "1.0"
+services:
+  frontend:
+    build: 
+      context: ./frontend
+    container_name: verichain-frontend
+    ports:
+      - "5173:5173"  # host:container
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    environment:
+      - VITE_API_URL=http://localhost:3001/api  
+    depends_on:
+      - express
+
+  hardhat:
+    build: 
+      context: ./Backend
+      dockerfile: Dockerfile.hardhat
+    image: hardhat-node
+    container_name: hardhat-node
+    working_dir: /app
+    volumes:
+      - ./Backend:/app
+    command: npx hardhat node
+    ports:
+      - "8545:8545"
+
+  express:
+    build: 
+      context: ./Backend
+      dockerfile: Dockerfile.backend
+    container_name: express-server
+    depends_on:
+      - hardhat   
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./Backend:/app
+    command: sh start.sh
+    environment:
+      - HARDHAT_NODE_URL=http://hardhat:8545

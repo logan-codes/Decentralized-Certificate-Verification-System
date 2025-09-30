@@ -36,7 +36,7 @@ class BlockchainService {
 
   async connect() {
     try {
-      this.provider = new ethers.JsonRpcProvider(RPC_URL);
+      this.provider = new ethers.JsonRpcProvider(process.env.HARDHAT_NODE_URL || 'http://hardhat:8545');
 
       if (!PRIVATE_KEY) throw new Error("Missing PRIVATE_KEY in environment");
 

@@ -9,7 +9,7 @@ interface NavbarProps {
 
 
 const navItems = [
-  { name: 'Issue Certificate', href: '/issue' },
+  { name: 'Issue Certificate', href: '/' },
   { name: 'Verify Certificate', href: '/verify' },
   
 ];
