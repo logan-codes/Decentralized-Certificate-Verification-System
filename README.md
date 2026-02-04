@@ -24,19 +24,19 @@ A secure, decentralized platform for issuing and verifying academic and professi
 
 ```mermaid
 graph TD
-    User[User / Institution] -->|Uploads PDF| Frontend[Frontend (React)]
-    Frontend -->|Sends File| Backend[Backend API (Express)]
-    Backend -->|Generates CID| IPFS[IPFS Logic / Storage]
-    Backend -->|Stores Hash & Metadata| Blockchain[Hardhat Network (Ethereum)]
+    User["User / Institution"] -->|Uploads PDF| Frontend["Frontend (React)"]
+    Frontend -->|Sends File| Backend["Backend API (Express)"]
+    Backend -->|Generates CID| IPFS["IPFS Logic / Storage"]
+    Backend -->|Stores Hash & Metadata| Blockchain["Hardhat Network (Ethereum)"]
     Blockchain -- Returns Tx Hash --> Backend
     Backend -- Returns QR Code --> Frontend
     Frontend -- Displays Certificate --> User
     
-    Verifier[Verifier] -->|Uploads File/Scans QR| Frontend
-    Frontend -->|Request Verification| Backend
-    Backend -->|Fetch Contract Data| Blockchain
+    Verifier["Verifier"] -->|"Uploads File/Scans QR"| Frontend
+    Frontend -->|"Request Verification"| Backend
+    Backend -->|"Fetch Contract Data"| Blockchain
     Blockchain -- Returns Validity --> Backend
-    Backend -- Verification Result --> Frontend
+    Backend -- "Verification Result" --> Frontend
 ```
 
 ---
